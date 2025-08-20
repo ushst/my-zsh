@@ -1,5 +1,5 @@
 # ZSH
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/krolchonok/my-zsh/main/install.sh)"
+`bash -c "$(curl -fsSL https://raw.githubusercontent.com/krolchonok/my-zsh/main/install.sh)"`
 
 
 # NANO
