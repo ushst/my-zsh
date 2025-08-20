@@ -10,7 +10,6 @@ PLUGINS_REPO2="https://github.com/zsh-users/zsh-syntax-highlighting.git"
 # =============================
 
 echo "[*] Установка зависимостей..."
-sudo apt update -y
 sudo apt install -y git zsh curl wget
 
 echo "[*] Установка Oh-My-Zsh..."
