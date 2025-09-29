@@ -4,7 +4,7 @@ typeset -gA UpdaterCfg
 UpdaterCfg[repoRawBase]="https://raw.githubusercontent.com/ushst/my-zsh/main"
 UpdaterCfg[remoteZshrcPath]=".zshrc"
 UpdaterCfg[remoteVersionPath]="version.txt"
-UpdaterCfg[checkIntervalSeconds]=21600   # 6 часов
+UpdaterCfg[checkIntervalSeconds]=0   # 6 часов
 
 localZshrc="${HOME}/.zshrc"
 localStateDir="${XDG_STATE_HOME:-${HOME}/.local/state}/zsh-updater"
