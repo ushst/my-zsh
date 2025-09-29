@@ -1,10 +1,9 @@
-# VERSION=1.0.0
 # --- zshrc auto-updater (github.com/ushst/my-zsh) ---
 typeset -gA UpdaterCfg
 UpdaterCfg[repoRawBase]="https://raw.githubusercontent.com/ushst/my-zsh/main"
 UpdaterCfg[remoteZshrcPath]=".zshrc"
 UpdaterCfg[remoteVersionPath]="version.txt"
-UpdaterCfg[checkIntervalSeconds]=0   # 6 часов
+UpdaterCfg[checkIntervalSeconds]=21600   # 6 часов
 
 localZshrc="${HOME}/.zshrc"
 localStateDir="${XDG_STATE_HOME:-${HOME}/.local/state}/zsh-updater"
@@ -15,8 +14,8 @@ localVersionFile="${localStateDir}/local_version"
 lockFile="${localStateDir}/lock"
 
 get_local_version() {
-  if [[ -f "${localVersionFile}" ]]; then cat "${localVersionFile}"; return; fi
-  if [[ -f "${localZshrc}" ]]; then sed -n 's/^# *VERSION=\(.*\)$/\1/p' "${localZshrc}" | head -n1; fi
+  [[ -f "${localVersionFile}" ]] && cat "${localVersionFile}" && return
+  echo "0.0.0"
 }
 
 version_lt() { [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" != "$2" ]]; }
@@ -46,24 +45,20 @@ _do_update_check() {
   remoteVersion="$(curl -fsSL "${repo}/${rverPath}" 2>/dev/null || true)"
   [[ -n "${remoteVersion}" ]] || return 0
 
-  localVersion="$(get_local_version)"; [[ -n "${localVersion}" ]] || localVersion="0.0.0"
+  localVersion="$(get_local_version)"
 
   if version_lt "${localVersion}" "${remoteVersion}"; then
     tmpNew="${localStateDir}/.zshrc.new"
     backup="${localStateDir}/zshrc.backup.$(date +%Y%m%d-%H%M%S)"
 
-    # Полоса проверки (простая имитация)
+    # простая «полоса проверки»
     if [[ -t 1 ]]; then
       echo -n "[zsh-updater] Проверка"
-      for i in 1 2 3; do
-        sleep 0.3
-        echo -n "."
-      done
+      for i in 1 2 3; do sleep 0.2; echo -n "."; done
       echo
     fi
 
     if curl -fsSL "${repo}/${rcfgPath}" -o "${tmpNew}"; then
-      grep -q "^# *VERSION=${remoteVersion}\b" "${tmpNew}" || { rm -f "${tmpNew}"; return 0; }
       cp -f "${localZshrc}" "${backup}" 2>/dev/null || true
       mv -f "${tmpNew}" "${localZshrc}"
       update_local_version_cache "${remoteVersion}"
@@ -72,7 +67,6 @@ _do_update_check() {
   fi
 }
 
-# Теперь не в фоне, а тихо при старте
 zshrc_update_check
 # --- end zshrc auto-updater ---
 
