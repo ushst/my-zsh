@@ -18,7 +18,7 @@ get_local_version() {
   echo "0.0.0"
 }
 
-version_lt() { [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" != "$2" ]]; }
+version_lt() { [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" == "$1" && "$1" != "$2" ]]; }
 
 should_check_now() {
   now=$(date +%s)
