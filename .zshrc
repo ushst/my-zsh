@@ -1,3 +1,5 @@
+# VERSION=1.0.0
+# --- zshrc auto-updater (github.com/ushst/my-zsh) ---
 typeset -gA UpdaterCfg
 UpdaterCfg[repoRawBase]="https://raw.githubusercontent.com/ushst/my-zsh/main"
 UpdaterCfg[remoteZshrcPath]=".zshrc"
@@ -50,6 +52,16 @@ _do_update_check() {
     tmpNew="${localStateDir}/.zshrc.new"
     backup="${localStateDir}/zshrc.backup.$(date +%Y%m%d-%H%M%S)"
 
+    # Полоса проверки (простая имитация)
+    if [[ -t 1 ]]; then
+      echo -n "[zsh-updater] Проверка"
+      for i in 1 2 3; do
+        sleep 0.3
+        echo -n "."
+      done
+      echo
+    fi
+
     if curl -fsSL "${repo}/${rcfgPath}" -o "${tmpNew}"; then
       grep -q "^# *VERSION=${remoteVersion}\b" "${tmpNew}" || { rm -f "${tmpNew}"; return 0; }
       cp -f "${localZshrc}" "${backup}" 2>/dev/null || true
@@ -60,7 +72,8 @@ _do_update_check() {
   fi
 }
 
-( zshrc_update_check ) >/dev/null 2>&1 &
+# Теперь не в фоне, а тихо при старте
+zshrc_update_check
 # --- end zshrc auto-updater ---
 
 # If you come from bash you might have to change your $PATH.
