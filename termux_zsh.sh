@@ -4,7 +4,7 @@ set -e
 # ========= Настройки =========
 ZSH_DIR="${HOME}/.oh-my-zsh"
 ZDOTDIR="${HOME}"
-ZSHRC_URL="https://raw.githubusercontent.com/krolchonok/my-zsh/main/.zshrc"
+ZSHRC_URL="https://raw.githubusercontent.com/ushst/my-zsh/main/.zshrc"
 PLUGINS_REPO1="https://github.com/zsh-users/zsh-autosuggestions"
 PLUGINS_REPO2="https://github.com/zsh-users/zsh-syntax-highlighting.git"
 # =============================
