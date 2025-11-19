@@ -4,6 +4,10 @@ UpdaterCfg[repoRawBase]="https://raw.githubusercontent.com/ushst/my-zsh/main"
 UpdaterCfg[remoteZshrcPath]=".zshrc"
 UpdaterCfg[remoteVersionPath]="version.txt"
 UpdaterCfg[checkIntervalSeconds]=21600   # 6 часов
+UpdaterCfg[offlineRetrySeconds]=300       # повторная попытка через 5 минут, если сети нет
+UpdaterCfg[networkCheckRetries]=3
+UpdaterCfg[networkRetryDelaySeconds]=1
+UpdaterCfg[networkCheckTimeoutSeconds]=2
 
 localZshrc="${HOME}/.zshrc"
 localStateDir="${XDG_STATE_HOME:-${HOME}/.local/state}/zsh-updater"
@@ -12,6 +16,7 @@ mkdir -p "${localStateDir}"
 lastCheckFile="${localStateDir}/last_check"
 localVersionFile="${localStateDir}/local_version"
 lockFile="${localStateDir}/lock"
+deferredFlag="${localStateDir}/deferred_check_scheduled"
 
 get_local_version() {
   [[ -f "${localVersionFile}" ]] && cat "${localVersionFile}" && return
@@ -31,8 +36,46 @@ with_lock() { exec 9>"${lockFile}"; flock -n 9 || return 1; "$@"; }
 
 update_local_version_cache() { echo "$1" > "${localVersionFile}"; }
 
+network_available() {
+  local testUrl="${UpdaterCfg[repoRawBase]}/${UpdaterCfg[remoteVersionPath]}"
+  local retries=${UpdaterCfg[networkCheckRetries]}
+  local delay=${UpdaterCfg[networkRetryDelaySeconds]}
+  local timeout=${UpdaterCfg[networkCheckTimeoutSeconds]}
+
+  for (( attempt = 1; attempt <= retries; attempt++ )); do
+    if curl -fsI --max-time "${timeout}" "${testUrl}" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep "${delay}"
+  done
+
+  return 1
+}
+
+schedule_offline_retry() {
+  local delay="${UpdaterCfg[offlineRetrySeconds]}"
+  [[ -f "${deferredFlag}" ]] && return 0
+
+  echo "${delay}" > "${deferredFlag}"
+  (
+    sleep "${delay}"
+    rm -f "${deferredFlag}"
+    zshrc_update_check 1
+  ) >/dev/null 2>&1 &
+}
+
 zshrc_update_check() {
-  should_check_now || return 0
+  local force="${1:-0}"
+
+  (( force )) || should_check_now || return 0
+
+  if ! network_available; then
+    echo "$(date +%s)" > "${lastCheckFile}"
+    [[ -t 1 ]] && echo "[zsh-updater] Сети нет. Повторим проверку позже."
+    schedule_offline_retry
+    return 0
+  fi
+
   with_lock _do_update_check
   echo "$(date +%s)" > "${lastCheckFile}"
 }
