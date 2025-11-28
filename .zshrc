@@ -148,6 +148,12 @@ function a() {
     if [ "$1" = "i" ]; then
         shift
         sudo apt install "$@"
+    elif [ "$1" = "u" ]; then
+        sudo apt update
+    elif [ "$1" = "up" ]; then
+        sudo apt upgrade -y
+    elif [ "$1" = "all" ]; then
+        sudo apt update && sudo apt upgrade -y
     else
         echo "Неизвестная команда: a $1"
     fi
