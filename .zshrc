@@ -147,7 +147,7 @@ alias untargz='tar -xvzf'
 function a() {
     if [ "$1" = "i" ]; then
         shift
-        sudo apt install "$@"
+        sudo apt install "$@" && exec zsh
     elif [ "$1" = "u" ]; then
         sudo apt update
     elif [ "$1" = "up" ]; then
