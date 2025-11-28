@@ -110,7 +110,12 @@ _do_update_check() {
   fi
 }
 
-zshrc_update_check
+trigger_zshrc_update_check() {
+  # Проверяем в фоне, чтобы запуск shell не блокировался при отсутствии сети
+  ( zshrc_update_check "$@" ) &!
+}
+
+trigger_zshrc_update_check
 # --- end zshrc auto-updater ---
 
 # If you come from bash you might have to change your $PATH.
@@ -145,12 +150,24 @@ export NVM_DIR="$HOME/.nvm"
 alias untargz='tar -xvzf'
 
 function a() {
-    if [ "$1" = "i" ]; then
-        shift
-        sudo apt install "$@"
-    else
-        echo "Неизвестная команда: a $1"
-    fi
+    case "$1" in
+        i)
+            shift
+            sudo apt install "$@"
+            ;;
+        u)
+            sudo apt update
+            ;;
+        up)
+            sudo apt upgrade -y
+            ;;
+        all)
+            sudo apt update && sudo apt upgrade -y
+            ;;
+        *)
+            echo "Неизвестная команда: a $1"
+            ;;
+    esac
 }
 
 extract() {

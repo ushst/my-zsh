@@ -29,5 +29,5 @@ wget -O "${ZDOTDIR}/.zshrc" "$ZSHRC_URL"
 echo "[*] Смена стандартной оболочки на zsh..."
 chsh -s "$(which zsh)" "$USER"
 
-echo "[*] Установка завершена! Чтобы применить изменения выполните:"
-echo "   exec zsh"
+echo "[*] Установка завершена! Запускаю новую сессию zsh..."
+exec zsh
