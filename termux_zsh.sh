@@ -26,6 +26,19 @@ git clone "$PLUGINS_REPO2" ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax
 echo "[*] Загрузка конфигурации .zshrc..."
 wget -O "${ZDOTDIR}/.zshrc" "$ZSHRC_URL"
 
+# Если установка проходит в Termux — заменим "sudo apt install" на "apt install" в .zshrc
+if [ -n "$TERMUX_VERSION" ] || ( [ -n "$PREFIX" ] && [[ "$PREFIX" == *"com.termux"* ]] ); then
+  echo "[*] Обнаружен Termux — адаптирую .zshrc (замена 'sudo apt install' -> 'apt install')..."
+  if grep -q "sudo apt install" "${ZDOTDIR}/.zshrc" 2>/dev/null; then
+    # делаем inplace замену и удаляем бэкап, если он создастся
+    sed -i.bak 's/sudo apt install/apt install/g' "${ZDOTDIR}/.zshrc" || true
+    rm -f "${ZDOTDIR}/.zshrc.bak" || true
+    echo "[*] Замена выполнена."
+  else
+    echo "[*] В .zshrc не найдено 'sudo apt install' — ничего менять не нужно."
+  fi
+fi
+
 echo "[*] Смена стандартной оболочки на zsh..."
 chsh -s "$(which zsh)" "$USER"
 
