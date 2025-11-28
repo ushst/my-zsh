@@ -1,0 +1,365 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>my-zsh — быстрый старт</title>
+  <style>
+    :root {
+      --bg: #0f141a;
+      --panel: #161c23;
+      --accent: #7bc9f3;
+      --text: #d8e4ef;
+      --muted: #8aa0b2;
+      --success: #8de0a6;
+      --warning: #f4c07a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 20%, rgba(123,201,243,0.05), transparent 35%),
+                  radial-gradient(circle at 80% 10%, rgba(141,224,166,0.06), transparent 30%),
+                  var(--bg);
+      color: var(--text);
+      font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .wrapper {
+      max-width: 1100px;
+      margin: 0 auto 64px;
+      background: linear-gradient(135deg, rgba(22,28,35,0.8), rgba(17,23,29,0.9));
+      border: 1px solid rgba(123,201,243,0.1);
+      border-radius: 16px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.45);
+      overflow: hidden;
+    }
+    header {
+      padding: 28px 32px 12px;
+      border-bottom: 1px solid rgba(123,201,243,0.1);
+    }
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 22px;
+      letter-spacing: 0.5px;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: rgba(141,224,166,0.1);
+      border: 1px solid rgba(141,224,166,0.35);
+      color: var(--success);
+      font-size: 13px;
+    }
+    .tagline {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .ascii {
+      font-size: 11px;
+      color: var(--accent);
+      white-space: pre;
+      background: rgba(0,0,0,0.25);
+      padding: 16px;
+      margin: 20px 0 0;
+      border: 1px solid rgba(123,201,243,0.08);
+      border-radius: 12px;
+      overflow-x: auto;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(123,201,243,0.08);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .card h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      color: var(--accent);
+      letter-spacing: 0.4px;
+    }
+    .meta p {
+      margin: 2px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .chapter {
+      padding: 20px 32px 28px;
+      border-top: 1px solid rgba(123,201,243,0.07);
+    }
+    .chapter h2 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+    }
+    .chapter small {
+      color: var(--muted);
+    }
+    .info {
+      margin: 14px 0;
+      padding: 14px 16px;
+      background: rgba(123,201,243,0.05);
+      border: 1px dashed rgba(123,201,243,0.3);
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .steps {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+    .step {
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(123,201,243,0.08);
+      border-radius: 12px;
+    }
+    .step strong { color: var(--success); }
+    .command {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(123,201,243,0.15);
+      border-radius: 10px;
+      padding: 10px 12px;
+      overflow-x: auto;
+    }
+    .command code {
+      color: #fefefe;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+    .copy-btn {
+      margin-left: auto;
+      padding: 8px 10px;
+      background: rgba(123,201,243,0.15);
+      border: 1px solid rgba(123,201,243,0.4);
+      color: var(--accent);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+    .copy-btn:hover { background: rgba(123,201,243,0.25); }
+    .copy-btn.copied {
+      background: rgba(141,224,166,0.2);
+      border-color: rgba(141,224,166,0.5);
+      color: var(--success);
+    }
+    .notice {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      padding: 12px 16px;
+      background: var(--panel);
+      border: 1px solid rgba(141,224,166,0.4);
+      border-radius: 10px;
+      color: var(--success);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: 0.2s ease;
+      pointer-events: none;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+    }
+    .notice.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    footer {
+      padding: 18px 32px 24px;
+      border-top: 1px solid rgba(123,201,243,0.07);
+      color: var(--muted);
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    @media (max-width: 640px) {
+      body { padding: 16px; }
+      header, .chapter, footer { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header>
+      <div class="title">
+        <span>┌─[ ushst/my-zsh ]</span>
+        <span class="status">● Сборка готова</span>
+      </div>
+      <p class="tagline">Готовые конфигурации ZSH и Nano. Делайте развёртывание в один шаг на Linux или Termux.</p>
+      <div class="ascii" aria-hidden="true">
+███████╗███████╗██╗  ██╗    ███████╗███████╗████████╗██╗   ██╗██████╗
+╚══███╔╝██╔════╝██║  ██║    ██╔════╝██╔════╝╚══██╔══╝██║   ██║██╔══██╗
+  ███╔╝ ███████╗███████║    ███████╗█████╗     ██║   ██║   ██║██████╔╝
+ ███╔╝  ╚════██║██╔══██║    ╚════██║██╔══╝     ██║   ██║   ██║██╔═══╝
+███████╗███████║██║  ██║    ███████║███████╗   ██║   ╚██████╔╝██║
+╚══════╝╚══════╝╚═╝  ╚═╝    ╚══════╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝
+      </div>
+      <div class="grid">
+        <div class="card">
+          <h3>GitHub</h3>
+          <div class="meta">
+            <p><strong>Repo:</strong> <a href="https://github.com/ushst/my-zsh" target="_blank" rel="noreferrer">ushst/my-zsh</a></p>
+            <p><strong>Stars:</strong> 0 • <strong>Watchers:</strong> 1 • <strong>Forks:</strong> 0</p>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Содержимое</h3>
+          <div class="meta">
+            <p>• Полный zsh конфиг (.zshrc)</p>
+            <p>• Установка плагинов autosuggestions + syntax-highlighting</p>
+            <p>• Готовый .nanorc и msfconsole.rc</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="chapter" id="linux-zsh">
+      <h2>[ ZSH для Linux ]</h2>
+      <small>Скрипт install.sh ставит Oh-My-Zsh, плагины и конфигурацию.</small>
+      <div class="info">Требуется sudo. По завершении смените оболочку на zsh и перезапустите терминал.</div>
+      <ol class="steps">
+        <li class="step"><strong>Шаг 1.</strong> Обновите зависимости
+          <div class="command" data-command="sudo apt install zsh curl wget git -y">
+            <code>$ sudo apt install zsh curl wget git -y</code>
+            <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+          </div>
+        </li>
+        <li class="step"><strong>Шаг 2.</strong> Запустите установку конфигурации
+          <div class="command" data-command='bash -c "$(curl -fsSL https://raw.githubusercontent.com/ushst/my-zsh/main/install.sh)"'>
+            <code>bash -c "$(curl -fsSL https://raw.githubusercontent.com/ushst/my-zsh/main/install.sh)"</code>
+            <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+          </div>
+        </li>
+        <li class="step"><strong>Шаг 3.</strong> Сделайте zsh оболочкой по умолчанию
+          <div class="command" data-command="chsh -s $(which zsh)">
+            <code>chsh -s $(which zsh)</code>
+            <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+          </div>
+        </li>
+        <li class="step"><strong>Шаг 4.</strong> Перезапустите сессию
+          <div class="command" data-command="exec zsh">
+            <code>exec zsh</code>
+            <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section class="chapter" id="termux-zsh">
+      <h2>[ ZSH для Termux ]</h2>
+      <small>Скрипт termux_zsh.sh адаптирует .zshrc под Termux и ставит плагины.</small>
+      <div class="info">Используется пакетный менеджер pkg. sudo не нужен.</div>
+      <ol class="steps">
+        <li class="step"><strong>Шаг 1.</strong> Установите зависимости
+          <div class="command" data-command="pkg install zsh curl wget git -y">
+            <code>pkg install zsh curl wget git -y</code>
+            <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+          </div>
+        </li>
+        <li class="step"><strong>Шаг 2.</strong> Выполните установщик конфигурации
+          <div class="command" data-command='bash -c "$(curl -fsSL https://raw.githubusercontent.com/ushst/my-zsh/main/termux_zsh.sh)"'>
+            <code>bash -c "$(curl -fsSL https://raw.githubusercontent.com/ushst/my-zsh/main/termux_zsh.sh)"</code>
+            <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+          </div>
+        </li>
+        <li class="step"><strong>Шаг 3.</strong> Сделайте zsh основным и перезапустите
+          <div class="command" data-command="chsh -s $(which zsh) && exec zsh">
+            <code>$ chsh -s $(which zsh) && exec zsh</code>
+            <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section class="chapter" id="nano">
+      <h2>[ Конфигурация Nano ]</h2>
+      <small>.nanorc с подсветкой и полезными настройками.</small>
+      <div class="info">Можно ставить отдельно от ZSH. Команда перезапишет ~/.nanorc.</div>
+      <div class="step">
+        <strong>Установка:</strong>
+        <div class="command" data-command="sudo wget -O ~/.nanorc https://raw.githubusercontent.com/ushst/my-zsh/main/.nanorc">
+          <code>$ sudo wget -O ~/.nanorc https://raw.githubusercontent.com/ushst/my-zsh/main/.nanorc</code>
+          <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter" id="msfconsole">
+      <h2>[ Настройка msfconsole ]</h2>
+      <small>Дополнительный aliases для Metasploit Framework.</small>
+      <div class="info">Создаёт ~/.msf4/msfconsole.rc и добавляет alias s → search.</div>
+      <ol class="steps">
+        <li class="step"><strong>Шаг 1.</strong> Подготовьте директорию
+          <div class="command" data-command="mkdir -p ~/.msf4">
+            <code>$ mkdir -p ~/.msf4</code>
+            <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+          </div>
+        </li>
+        <li class="step"><strong>Шаг 2.</strong> Скачайте конфиг
+          <div class="command" data-command="wget -O ~/.msf4/msfconsole.rc https://raw.githubusercontent.com/ushst/my-zsh/main/msfconsole.rc">
+            <code>$ wget -O ~/.msf4/msfconsole.rc https://raw.githubusercontent.com/ushst/my-zsh/main/msfconsole.rc</code>
+            <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <footer>
+      <span>[ System Ready _ ]</span>
+      <span>© 2025 ushst/my-zsh • Terminal Interface v1.1</span>
+    </footer>
+  </div>
+
+  <div id="notification" class="notice">Команда скопирована</div>
+
+  <script>
+    function copyCommand(button) {
+      const commandBlock = button.closest('.command');
+      const command = commandBlock.getAttribute('data-command');
+
+      navigator.clipboard.writeText(command).then(() => {
+        const notification = document.getElementById('notification');
+        notification.classList.add('show');
+        const original = button.textContent;
+        button.textContent = '✓';
+        button.classList.add('copied');
+        setTimeout(() => {
+          notification.classList.remove('show');
+          button.textContent = original;
+          button.classList.remove('copied');
+        }, 1800);
+      }).catch((err) => {
+        console.error('Ошибка при копировании: ', err);
+        alert('Не удалось скопировать команду');
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('%c my-zsh landing loaded ', 'background: #0f141a; color: #7bc9f3; font-family: monospace; padding: 4px;');
+    });
+  </script>
+</body>
+</html>
