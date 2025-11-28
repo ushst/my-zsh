@@ -6,3 +6,6 @@
 
 # NANO
 `sudo wget -O ~/.nanorc https://raw.githubusercontent.com/ushst/my-zsh/main/.nanorc`
+
+# MSFCONSOLE
+`mkdir -p ~/.msf4 && wget -O ~/.msf4/msfconsole.rc https://raw.githubusercontent.com/ushst/my-zsh/main/msfconsole.rc`
