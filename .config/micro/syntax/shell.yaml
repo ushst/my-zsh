@@ -1,0 +1,24 @@
+filetype: sh
+detect:
+    filename: "\\.sh$"
+    header: "#!.*sh"
+rules:
+    - comment: "(^|\\s)#.*$"
+    - string:
+        start: "\""
+        end: "\""
+        skip: "\\\\."
+        rules:
+            - escape: "\\\\(.|
+)"
+            - placeholder: "%[-#0-9]*[.0-9]*[hlL]?[diouxXeEfFgGaAcspn%]"
+    - string:
+        start: "'"
+        end: "'"
+        skip: "\\\\."
+        rules:
+            - escape: "\\\\(.|
+)"
+    - number: "\\b[0-9]+([.][0-9]*)?([eE][+-]?[0-9]+)?\\b"
+    - symbol: "[\\$\\(\\)\\{\\}\\[\\];\\<>]"
+    - keyword: "\\b(if|then|else|elif|fi|case|in|do|done|for|while|until|function|return)\\b"
