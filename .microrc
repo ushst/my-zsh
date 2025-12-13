@@ -1,0 +1,16 @@
+# Micro editor configuration for syntax highlighting
+
+# Colorscheme (optional)
+set colorscheme default
+
+# Tab settings
+set tabsize 4
+set expandtab true
+
+# Behavior
+set autoindent true
+set softwrap true
+set rmtrailingws true
+
+# Enable syntax highlighting
+set syntaxhl true
