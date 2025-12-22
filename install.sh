@@ -10,7 +10,7 @@ PLUGINS_REPO2="https://github.com/zsh-users/zsh-syntax-highlighting.git"
 # =============================
 
 echo "[*] Установка зависимостей..."
-sudo apt install -y git zsh curl wget which
+sudo apt install -y git zsh curl wget
 
 echo "[*] Установка Oh-My-Zsh..."
 # Скачаем и запускаем установщик oh-my-zsh в режиме unattended
