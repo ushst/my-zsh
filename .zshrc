@@ -1,50 +1,75 @@
-# --- zshrc auto-updater (github.com/ushst/my-zsh) ---
-typeset -gA UpdaterCfg
-UpdaterCfg[repoRawBase]="https://raw.githubusercontent.com/ushst/my-zsh/main"
-UpdaterCfg[remoteZshrcPath]=".zshrc"
-UpdaterCfg[remoteVersionPath]="version.txt"
-UpdaterCfg[checkIntervalSeconds]=21600   # 6 часов
-UpdaterCfg[offlineRetrySeconds]=300       # повторная попытка через 5 минут, если сети нет
-UpdaterCfg[networkCheckRetries]=3
-UpdaterCfg[networkRetryDelaySeconds]=1
-UpdaterCfg[networkCheckTimeoutSeconds]=2
+# --- my-zsh loader + auto-updater (github.com/ushst/my-zsh) ---
+# This file is intended to stay small and stable.
+# Your personal config should go to ~/.zshrc.local or ~/.zshrc.d/*.zsh
 
-localZshrc="${HOME}/.zshrc"
-localStateDir="${XDG_STATE_HOME:-${HOME}/.local/state}/zsh-updater"
-mkdir -p "${localStateDir}"
+typeset -gA MyZshUpdaterCfg
+MyZshUpdaterCfg[repoRawBase]="https://raw.githubusercontent.com/ushst/my-zsh/main"
+MyZshUpdaterCfg[remoteVersionPath]="version.txt"
+MyZshUpdaterCfg[remoteManagedPath]="zshrc.managed"
+MyZshUpdaterCfg[checkIntervalSeconds]=21600   # 6 hours
+MyZshUpdaterCfg[offlineRetrySeconds]=300      # retry in 5 minutes if offline
+MyZshUpdaterCfg[networkCheckRetries]=3
+MyZshUpdaterCfg[networkRetryDelaySeconds]=1
+MyZshUpdaterCfg[networkCheckTimeoutSeconds]=2
 
-lastCheckFile="${localStateDir}/last_check"
-localVersionFile="${localStateDir}/local_version"
-lockFile="${localStateDir}/lock"
-deferredFlag="${localStateDir}/deferred_check_scheduled"
+my_zsh_state_dir="${XDG_STATE_HOME:-${HOME}/.local/state}/my-zsh"
+my_zsh_config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/my-zsh"
+mkdir -p "${my_zsh_state_dir}" "${my_zsh_config_dir}" 2>/dev/null || true
 
-get_local_version() {
-  [[ -f "${localVersionFile}" ]] && cat "${localVersionFile}" && return
+my_zsh_last_check_file="${my_zsh_state_dir}/last_check"
+my_zsh_local_version_file="${my_zsh_state_dir}/local_version"
+my_zsh_lock_dir="${my_zsh_state_dir}/lockdir"
+my_zsh_deferred_flag="${my_zsh_state_dir}/deferred_check_scheduled"
+
+my_zsh_managed_file="${my_zsh_config_dir}/zshrc.managed"
+my_zsh_local_file="${HOME}/.zshrc.local"
+my_zsh_local_dir="${HOME}/.zshrc.d"
+
+my_zsh_get_local_version() {
+  [[ -f "${my_zsh_local_version_file}" ]] && cat "${my_zsh_local_version_file}" && return
   echo "0.0.0"
 }
 
-version_lt() { [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" == "$1" && "$1" != "$2" ]]; }
-
-should_check_now() {
-  now=$(date +%s)
-  [[ ! -f "${lastCheckFile}" ]] && return 0
-  last=$(<"${lastCheckFile}")
-  (( now - last >= UpdaterCfg[checkIntervalSeconds] ))
+my_zsh_version_lt() {
+  [[ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" == "$1" && "$1" != "$2" ]]
 }
 
-with_lock() { exec 9>"${lockFile}"; flock -n 9 || return 1; "$@"; }
+my_zsh_should_check_now() {
+  local now last
+  now=$(date +%s)
+  [[ ! -f "${my_zsh_last_check_file}" ]] && return 0
+  last=$(<"${my_zsh_last_check_file}")
+  (( now - last >= MyZshUpdaterCfg[checkIntervalSeconds] ))
+}
 
-update_local_version_cache() { echo "$1" > "${localVersionFile}"; }
+my_zsh_with_lock() {
+  # Portable lock (no flock dependency): mkdir is atomic on POSIX filesystems.
+  if mkdir "${my_zsh_lock_dir}" 2>/dev/null; then
+    "$@"
+    rmdir "${my_zsh_lock_dir}" 2>/dev/null || true
+    return 0
+  fi
+  return 1
+}
 
-network_available() {
-  local testUrl="${UpdaterCfg[repoRawBase]}/${UpdaterCfg[remoteVersionPath]}"
-  local retries=${UpdaterCfg[networkCheckRetries]}
-  local delay=${UpdaterCfg[networkRetryDelaySeconds]}
-  local timeout=${UpdaterCfg[networkCheckTimeoutSeconds]}
+my_zsh_network_available() {
+  local testUrl retries delay timeout attempt
+  testUrl="${MyZshUpdaterCfg[repoRawBase]}/${MyZshUpdaterCfg[remoteVersionPath]}"
+  retries=${MyZshUpdaterCfg[networkCheckRetries]}
+  delay=${MyZshUpdaterCfg[networkRetryDelaySeconds]}
+  timeout=${MyZshUpdaterCfg[networkCheckTimeoutSeconds]}
 
   for (( attempt = 1; attempt <= retries; attempt++ )); do
-    if curl -fsI --max-time "${timeout}" "${testUrl}" >/dev/null 2>&1; then
-      return 0
+    if command -v curl >/dev/null 2>&1; then
+      if curl -fsI --max-time "${timeout}" "${testUrl}" >/dev/null 2>&1; then
+        return 0
+      fi
+    elif command -v wget >/dev/null 2>&1; then
+      if wget -q --spider --timeout="${timeout}" "${testUrl}" >/dev/null 2>&1; then
+        return 0
+      fi
+    else
+      return 1
     fi
     sleep "${delay}"
   done
@@ -52,139 +77,109 @@ network_available() {
   return 1
 }
 
-schedule_offline_retry() {
-  local delay="${UpdaterCfg[offlineRetrySeconds]}"
-  [[ -f "${deferredFlag}" ]] && return 0
+my_zsh_update_local_version_cache() { echo "$1" > "${my_zsh_local_version_file}"; }
 
-  echo "${delay}" > "${deferredFlag}"
+my_zsh_schedule_offline_retry() {
+  local delay="${MyZshUpdaterCfg[offlineRetrySeconds]}"
+  [[ -f "${my_zsh_deferred_flag}" ]] && return 0
+
+  echo "${delay}" > "${my_zsh_deferred_flag}"
   (
     sleep "${delay}"
-    rm -f "${deferredFlag}"
-    zshrc_update_check 1
+    rm -f "${my_zsh_deferred_flag}"
+    my_zsh_update_check 1
   ) >/dev/null 2>&1 &
 }
 
-zshrc_update_check() {
-  local force="${1:-0}"
-
-  (( force )) || should_check_now || return 0
-
-  if ! network_available; then
-    echo "$(date +%s)" > "${lastCheckFile}"
-    [[ -t 1 ]] && echo "[zsh-updater] Сети нет. Повторим проверку позже."
-    schedule_offline_retry
-    return 0
+my_zsh_fetch_to() {
+  local url out
+  url="$1"
+  out="$2"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "${url}" -o "${out}"
+    return $?
   fi
-
-  with_lock _do_update_check
-  echo "$(date +%s)" > "${lastCheckFile}"
+  if command -v wget >/dev/null 2>&1; then
+    wget -q -O "${out}" "${url}"
+    return $?
+  fi
+  return 1
 }
 
-_do_update_check() {
-  local repo="${UpdaterCfg[repoRawBase]}"
-  local rverPath="${UpdaterCfg[remoteVersionPath]}"
-  local rcfgPath="${UpdaterCfg[remoteZshrcPath]}"
+my_zsh_do_update_check() {
+  local repo remoteVersion localVersion tmpNew backup
 
-  remoteVersion="$(curl -fsSL "${repo}/${rverPath}" 2>/dev/null || true)"
+  repo="${MyZshUpdaterCfg[repoRawBase]}"
+  remoteVersion="$( (command -v curl >/dev/null 2>&1 && curl -fsSL "${repo}/${MyZshUpdaterCfg[remoteVersionPath]}" 2>/dev/null) || (command -v wget >/dev/null 2>&1 && wget -q -O - "${repo}/${MyZshUpdaterCfg[remoteVersionPath]}" 2>/dev/null) || true )"
   [[ -n "${remoteVersion}" ]] || return 0
 
-  localVersion="$(get_local_version)"
+  localVersion="$(my_zsh_get_local_version)"
 
-  if version_lt "${localVersion}" "${remoteVersion}"; then
-    tmpNew="${localStateDir}/.zshrc.new"
-    backup="${localStateDir}/zshrc.backup.$(date +%Y%m%d-%H%M%S)"
+  # If managed file doesn't exist yet, treat it like version 0.0.0.
+  if [[ ! -f "${my_zsh_managed_file}" ]]; then
+    localVersion="0.0.0"
+  fi
 
-    # простая «полоса проверки»
+  if my_zsh_version_lt "${localVersion}" "${remoteVersion}"; then
+    tmpNew="${my_zsh_state_dir}/zshrc.managed.new"
+    backup="${my_zsh_state_dir}/managed.backup.$(date +%Y%m%d-%H%M%S)"
+
     if [[ -t 1 ]]; then
-      echo -n "[zsh-updater] Проверка"
+      echo -n "[my-zsh] Checking updates"
       for i in 1 2 3; do sleep 0.2; echo -n "."; done
       echo
     fi
 
-    if curl -fsSL "${repo}/${rcfgPath}" -o "${tmpNew}"; then
-      cp -f "${localZshrc}" "${backup}" 2>/dev/null || true
-      mv -f "${tmpNew}" "${localZshrc}"
-      update_local_version_cache "${remoteVersion}"
-      [[ -t 1 ]] && echo "[zsh-updater] Обновлено до ${remoteVersion}. Бэкап: ${backup}. Перезапусти shell."
+    if my_zsh_fetch_to "${repo}/${MyZshUpdaterCfg[remoteManagedPath]}" "${tmpNew}"; then
+      cp -f "${my_zsh_managed_file}" "${backup}" 2>/dev/null || true
+      mv -f "${tmpNew}" "${my_zsh_managed_file}"
+      my_zsh_update_local_version_cache "${remoteVersion}"
+      [[ -t 1 ]] && echo "[my-zsh] Updated managed config to ${remoteVersion}. Backup: ${backup}. Restart shell."
     fi
   fi
 }
 
-trigger_zshrc_update_check() {
-  # Проверяем в фоне, чтобы запуск shell не блокировался при отсутствии сети
-  ( zshrc_update_check "$@" ) &!
-}
+my_zsh_update_check() {
+  local force="${1:-0}"
 
-trigger_zshrc_update_check
-# --- end zshrc auto-updater ---
+  # Allow disabling auto-update.
+  [[ "${MY_ZSH_AUTOUPDATE:-1}" == "0" ]] && return 0
 
-# If you come from bash you might have to change your $PATH.
-# export PATH=$HOME/bin:/usr/local/bin:$PATH
+  (( force )) || my_zsh_should_check_now || return 0
 
-# Path to your oh-my-zsh installation.
-export ZSH="$HOME/.oh-my-zsh"
-
-# Theme
-ZSH_THEME="avit"
-
-# Plugins
-plugins=(
-  git
-  zsh-autosuggestions
-  zsh-syntax-highlighting
-)
-source $ZSH/oh-my-zsh.sh
-
-# User configuration
-prompt_context() {
-  if [[ "$USER" != "$DEFAULT_USER" || -n "$SSH_CLIENT" ]]; then
-    prompt_segment black default "%(!.%{%F{yellow}%}.)"
+  if ! my_zsh_network_available; then
+    echo "$(date +%s)" > "${my_zsh_last_check_file}"
+    [[ -t 1 ]] && echo "[my-zsh] Offline. Will retry later."
+    my_zsh_schedule_offline_retry
+    return 0
   fi
+
+  my_zsh_with_lock my_zsh_do_update_check || true
+  echo "$(date +%s)" > "${my_zsh_last_check_file}"
 }
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-
-# Custom aliases and functions
-alias untargz='tar -xvzf'
-
-function a() {
-    case "$1" in
-        i)
-            shift
-            sudo apt install "$@"
-            ;;
-        u)
-            sudo apt update
-            ;;
-        up)
-            sudo apt upgrade -y
-            ;;
-        all)
-            sudo apt update && sudo apt upgrade -y
-            ;;
-        *)
-            echo "Неизвестная команда: a $1"
-            ;;
-    esac
+my_zsh_trigger_update_check() {
+  # Run in background to avoid slowing shell startup.
+  ( my_zsh_update_check "$@" ) &!
 }
 
-extract() {
-  if [ -f "$1" ]; then
-    case "$1" in
-      *.tar.bz2)   tar xvjf "$1"    ;;
-      *.tar.gz)    tar xvzf "$1"    ;;
-      *.tar.xz)    tar xvJf "$1"    ;;
-      *.tar)       tar xvf "$1"     ;;
-      *.gz)        gunzip "$1"      ;;
-      *.zip)       unzip "$1"       ;;
-      *.rar)       unrar x "$1"     ;;
-      *.7z)        7z x "$1"        ;;
-      *)           echo "Неизвестный формат: $1" ;;
-    esac
-  else
-    echo "Файл не найден: $1"
-  fi
-}
-alias x='extract'
+# --- load managed config (auto-updated) ---
+if [[ -f "${my_zsh_managed_file}" ]]; then
+  source "${my_zsh_managed_file}"
+fi
+
+# --- load user overrides ---
+if [[ -f "${my_zsh_local_file}" ]]; then
+  source "${my_zsh_local_file}"
+fi
+
+if [[ -d "${my_zsh_local_dir}" ]]; then
+  for f in "${my_zsh_local_dir}"/*.zsh(N); do
+    source "$f"
+  done
+fi
+
+# Update last: takes effect next shell.
+my_zsh_trigger_update_check
+# --- end my-zsh loader + auto-updater ---
+
