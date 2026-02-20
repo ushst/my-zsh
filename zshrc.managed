@@ -33,6 +33,16 @@ export NVM_DIR="$HOME/.nvm"
 # Custom aliases and functions
 alias untargz='tar -xvzf'
 
+# npm s -> npm start
+npm() {
+  if [ "$1" = "s" ]; then
+    shift
+    command npm start "$@"
+    return
+  fi
+  command npm "$@"
+}
+
 function a() {
   case "$1" in
     i)
@@ -73,4 +83,3 @@ extract() {
 }
 
 alias x='extract'
-
