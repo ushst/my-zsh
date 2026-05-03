@@ -4,21 +4,45 @@ set -e
 # ========= Настройки =========
 ZSH_DIR="${HOME}/.oh-my-zsh"
 ZDOTDIR="${HOME}"
-ZSHRC_URL="https://raw.githubusercontent.com/ushst/my-zsh/main/.zshrc"
-ZSHRC_MANAGED_URL="https://raw.githubusercontent.com/ushst/my-zsh/main/zshrc.managed"
+REPO_BASE="https://raw.githubusercontent.com/ushst/my-zsh/main"
+ZSHRC_URL="${REPO_BASE}/.zshrc"
+ZSHRC_MANAGED_URL="${REPO_BASE}/zshrc.managed"
 PLUGINS_REPO1="https://github.com/zsh-users/zsh-autosuggestions"
 PLUGINS_REPO2="https://github.com/zsh-users/zsh-syntax-highlighting.git"
 # =============================
 
+download_file() {
+  local url="$1"
+  local out="$2"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$url" -o "$out"
+  else
+    wget -q -O "$out" "$url"
+  fi
+}
+
 echo "[*] Установка зависимостей..."
-sudo apt install -y git zsh curl wget
+if [ -n "$TERMUX_VERSION" ] || [[ "$PREFIX" == *"com.termux"* ]]; then
+  pkg install -y git zsh curl wget which
+else
+  # Debian/Ubuntu check
+  if command -v apt >/dev/null 2>&1; then
+    sudo apt update && sudo apt install -y git zsh curl wget
+  else
+    echo "[!] Предупреждение: Не удалось найти apt. Пожалуйста, установите git, zsh, curl и wget вручную."
+  fi
+fi
 
 echo "[*] Установка Oh-My-Zsh..."
 # Скачаем и запускаем установщик oh-my-zsh в режиме unattended
 export RUNZSH=no
 export CHSH=yes
 export KEEP_ZSHRC=yes
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --skip-chsh --keep-zshrc
+if command -v curl >/dev/null 2>&1; then
+  sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --skip-chsh --keep-zshrc
+else
+  sh -c "$(wget -qO- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --skip-chsh --keep-zshrc
+fi
 
 echo "[*] Установка плагинов..."
 git clone "$PLUGINS_REPO1" ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions || true
@@ -33,12 +57,12 @@ else
   if [ -f "${ZDOTDIR}/.zshrc" ]; then
     cp -f "${ZDOTDIR}/.zshrc" "${ZDOTDIR}/.zshrc.backup.$(date +%Y%m%d-%H%M%S)" || true
   fi
-  wget -O "${ZDOTDIR}/.zshrc" "$ZSHRC_URL"
+  download_file "$ZSHRC_URL" "${ZDOTDIR}/.zshrc"
 fi
 
 echo "[*] Загрузка managed-конфига (auto-updated)..."
 mkdir -p "${HOME}/.config/my-zsh" || true
-wget -O "${HOME}/.config/my-zsh/zshrc.managed" "$ZSHRC_MANAGED_URL"
+download_file "$ZSHRC_MANAGED_URL" "${HOME}/.config/my-zsh/zshrc.managed"
 
 echo "[*] Создаю файл для пользовательских правок: ~/.zshrc.local (если его нет)..."
 if [ ! -f "${HOME}/.zshrc.local" ]; then
@@ -78,30 +102,34 @@ backup_if_exists() {
 }
 
 # Micro
-MICRORC_URL="https://raw.githubusercontent.com/ushst/my-zsh/main/.microrc"
-MICRO_SHELL_SYNTAX_URL="https://raw.githubusercontent.com/ushst/my-zsh/main/.config/micro/syntax/shell.yaml"
+MICRORC_URL="${REPO_BASE}/.microrc"
+MICRO_SHELL_SYNTAX_URL="${REPO_BASE}/.config/micro/syntax/shell.yaml"
 
 if [ "${MY_ZSH_INSTALL_MICRO:-}" = "1" ] || ( [ "${MY_ZSH_INSTALL_MICRO:-}" != "0" ] && ask_yes_no "[?] Установить конфиг для micro ( .microrc + syntax )?" "N" ); then
   echo "[*] Установка конфига micro..."
   backup_if_exists "${HOME}/.microrc"
-  wget -O "${HOME}/.microrc" "$MICRORC_URL"
+  download_file "$MICRORC_URL" "${HOME}/.microrc"
   mkdir -p "${HOME}/.config/micro/syntax" || true
   backup_if_exists "${HOME}/.config/micro/syntax/shell.yaml"
-  wget -O "${HOME}/.config/micro/syntax/shell.yaml" "$MICRO_SHELL_SYNTAX_URL"
+  download_file "$MICRO_SHELL_SYNTAX_URL" "${HOME}/.config/micro/syntax/shell.yaml"
 fi
 
 # msfconsole
-MSFCONSOLE_RC_URL="https://raw.githubusercontent.com/ushst/my-zsh/main/msfconsole.rc"
+MSFCONSOLE_RC_URL="${REPO_BASE}/msfconsole.rc"
 
 if [ "${MY_ZSH_INSTALL_MSFCONSOLE:-}" = "1" ] || ( [ "${MY_ZSH_INSTALL_MSFCONSOLE:-}" != "0" ] && ask_yes_no "[?] Установить конфиг для msfconsole ( alias s -> search )?" "N" ); then
   echo "[*] Установка конфига msfconsole..."
   mkdir -p "${HOME}/.msf4" || true
   backup_if_exists "${HOME}/.msf4/msfconsole.rc"
-  wget -O "${HOME}/.msf4/msfconsole.rc" "$MSFCONSOLE_RC_URL"
+  download_file "$MSFCONSOLE_RC_URL" "${HOME}/.msf4/msfconsole.rc"
 fi
 
 echo "[*] Смена стандартной оболочки на zsh..."
-chsh -s "$(which zsh)" "$USER"
+if [ -n "$TERMUX_VERSION" ]; then
+  chsh -s zsh
+else
+  chsh -s "$(which zsh)" "$USER" || true
+fi
 
 echo "[*] Установка завершена! Запускаю новую сессию zsh..."
 exec zsh

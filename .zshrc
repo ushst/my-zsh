@@ -91,10 +91,21 @@ my_zsh_schedule_offline_retry() {
   ) >/dev/null 2>&1 &
 }
 
+my_zsh_fetch_stdout() {
+  local url="$1"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "${url}" 2>/dev/null
+    return $?
+  fi
+  if command -v wget >/dev/null 2>&1; then
+    wget -q -O - "${url}" 2>/dev/null
+    return $?
+  fi
+  return 1
+}
+
 my_zsh_fetch_to() {
-  local url out
-  url="$1"
-  out="$2"
+  local url="$1" out="$2"
   if command -v curl >/dev/null 2>&1; then
     curl -fsSL "${url}" -o "${out}"
     return $?
@@ -110,7 +121,7 @@ my_zsh_do_update_check() {
   local repo remoteVersion localVersion tmpNew backup
 
   repo="${MyZshUpdaterCfg[repoRawBase]}"
-  remoteVersion="$( (command -v curl >/dev/null 2>&1 && curl -fsSL "${repo}/${MyZshUpdaterCfg[remoteVersionPath]}" 2>/dev/null) || (command -v wget >/dev/null 2>&1 && wget -q -O - "${repo}/${MyZshUpdaterCfg[remoteVersionPath]}" 2>/dev/null) || true )"
+  remoteVersion="$(my_zsh_fetch_stdout "${repo}/${MyZshUpdaterCfg[remoteVersionPath]}" || true)"
   [[ -n "${remoteVersion}" ]] || return 0
 
   localVersion="$(my_zsh_get_local_version)"

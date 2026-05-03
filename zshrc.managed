@@ -70,38 +70,39 @@ alias untargz='tar -xvzf'
 
 
 function a() {
+  local pkg_mgr
+  if command -v apt >/dev/null 2>&1; then
+    pkg_mgr="apt"
+  elif command -v pkg >/dev/null 2>&1; then
+    pkg_mgr="pkg"
+  else
+    echo "No supported package manager (apt/pkg) found."
+    return 1
+  fi
+
+  local use_sudo=""
+  if [[ "$pkg_mgr" == "apt" ]] && command -v sudo >/dev/null 2>&1 && [ "$EUID" -ne 0 ]; then
+    use_sudo="sudo"
+  fi
+
   case "$1" in
-    i)
-      shift
-      sudo apt install "$@"
-      ;;
-    u)
-      sudo apt update
-      ;;
-    up)
-      sudo apt upgrade -y
-      ;;
-    all)
-      sudo apt update && sudo apt upgrade -y
-      ;;
-    *)
-      echo "Неизвестная команда: a $1"
-      ;;
+    i)   shift; $use_sudo $pkg_mgr install "$@" ;;
+    u)   $use_sudo $pkg_mgr update ;;
+    up)  $use_sudo $pkg_mgr upgrade -y ;;
+    all) $use_sudo $pkg_mgr update && $use_sudo $pkg_mgr upgrade -y ;;
+    *)   echo "Неизвестная команда: a $1" ;;
   esac
 }
 
 extract() {
   if [ -f "$1" ]; then
     case "$1" in
-      *.tar.bz2)   tar xvjf "$1"    ;;
-      *.tar.gz)    tar xvzf "$1"    ;;
-      *.tar.xz)    tar xvJf "$1"    ;;
-      *.tar)       tar xvf "$1"     ;;
-      *.gz)        gunzip "$1"      ;;
-      *.zip)       unzip "$1"       ;;
-      *.rar)       unrar x "$1"     ;;
-      *.7z)        7z x "$1"        ;;
-      *)           echo "Неизвестный формат: $1" ;;
+      *.tar.bz2|*.tar.gz|*.tar.xz|*.tar) tar xvf "$1" ;;
+      *.gz)    gunzip "$1"      ;;
+      *.zip)   unzip "$1"       ;;
+      *.rar)   unrar x "$1"     ;;
+      *.7z)    7z x "$1"        ;;
+      *)       echo "Неизвестный формат: $1" ;;
     esac
   else
     echo "Файл не найден: $1"
