@@ -158,14 +158,14 @@ my_zsh_update_check() {
   echo "$(date +%s)" > "${my_zsh_last_check_file}"
 }
 
-my_zsh_trigger_update_check() {
-  # Run in background to avoid slowing shell startup.
-  ( my_zsh_update_check "$@" ) &!
-}
-
 # --- load managed config (auto-updated) ---
 if [[ -f "${my_zsh_managed_file}" ]]; then
+  # Temporarily point NVM_DIR elsewhere to skip potential slow nvm.sh loading in old managed configs.
+  _real_nvm_dir="${NVM_DIR:-$HOME/.nvm}"
+  export NVM_DIR="/dev/null"
   source "${my_zsh_managed_file}"
+  export NVM_DIR="$_real_nvm_dir"
+  unset _real_nvm_dir
 fi
 
 # --- load user overrides ---
@@ -180,6 +180,8 @@ if [[ -d "${my_zsh_local_dir}" ]]; then
 fi
 
 # Update last: takes effect next shell.
+my_zsh_trigger_update_check() {
+  ( sleep 5; my_zsh_update_check "$@" ) &!
+}
 my_zsh_trigger_update_check
 # --- end my-zsh loader + auto-updater ---
-
