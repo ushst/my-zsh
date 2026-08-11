@@ -8,7 +8,7 @@ MyZshUpdaterCfg[remoteVersionPath]="version.txt"
 MyZshUpdaterCfg[remoteManagedPath]="zshrc.managed"
 MyZshUpdaterCfg[checkIntervalSeconds]=21600   # 6 hours
 MyZshUpdaterCfg[offlineRetrySeconds]=300      # retry in 5 minutes if offline
-MyZshUpdaterCfg[networkCheckRetries]=3
+MyZshUpdaterCfg[networkCheckRetries]=1
 MyZshUpdaterCfg[networkRetryDelaySeconds]=1
 MyZshUpdaterCfg[networkCheckTimeoutSeconds]=2
 
@@ -61,7 +61,7 @@ my_zsh_network_available() {
 
   for (( attempt = 1; attempt <= retries; attempt++ )); do
     if command -v curl >/dev/null 2>&1; then
-      if curl -fsI --max-time "${timeout}" "${testUrl}" >/dev/null 2>&1; then
+      if curl -fsI --connect-timeout 2 --max-time "${timeout}" "${testUrl}" >/dev/null 2>&1; then
         return 0
       fi
     elif command -v wget >/dev/null 2>&1; then
@@ -192,7 +192,7 @@ fi
 
 # Update last: takes effect next shell.
 my_zsh_trigger_update_check() {
-  ( sleep 5; my_zsh_update_check "$@" ) &!
+  ( sleep 5; my_zsh_update_check "$@" >/dev/null 2>&1 &! )
 }
 my_zsh_trigger_update_check
 # --- end my-zsh loader + auto-updater ---
