@@ -20,6 +20,10 @@ if [[ -n "$SSH_CONNECTION" || -n "$SSH_CLIENT" || -n "$SSH_TTY" ]]; then
     export ZSH_AUTOSUGGEST_WAIT_CMD_MS=100
 fi
 
+# Disable built-in Oh-My-Zsh auto-updater (managed by my-zsh loader in background)
+export DISABLE_AUTO_UPDATE="true"
+zstyle ':omz:update' mode disabled
+
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
