@@ -192,7 +192,7 @@ fi
 
 # Update last: takes effect next shell.
 my_zsh_trigger_update_check() {
-  ( ( my_zsh_update_check "$@" ) </dev/null >/dev/null 2>&1 & )
+  ( nohup zsh -c 'source ~/.zshrc; my_zsh_update_check "$@"' </dev/null >/dev/null 2>&1 & ) 2>/dev/null
 }
 my_zsh_trigger_update_check
 # --- end my-zsh loader + auto-updater ---
