@@ -84,11 +84,11 @@ my_zsh_schedule_offline_retry() {
   [[ -f "${my_zsh_deferred_flag}" ]] && return 0
 
   echo "${delay}" > "${my_zsh_deferred_flag}"
-  (
+  ( (
     sleep "${delay}"
     rm -f "${my_zsh_deferred_flag}"
     my_zsh_update_check 1
-  ) >/dev/null 2>&1 &
+  ) </dev/null >/dev/null 2>&1 & )
 }
 
 my_zsh_fetch_stdout() {
@@ -192,7 +192,7 @@ fi
 
 # Update last: takes effect next shell.
 my_zsh_trigger_update_check() {
-  ( sleep 5; my_zsh_update_check "$@" >/dev/null 2>&1 &! )
+  ( ( my_zsh_update_check "$@" ) </dev/null >/dev/null 2>&1 & )
 }
 my_zsh_trigger_update_check
 # --- end my-zsh loader + auto-updater ---
