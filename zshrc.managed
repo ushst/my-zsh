@@ -182,5 +182,5 @@ myzsh_faq() {
   Добавляйте свои функции и алиасы в ~/.zshrc.local или ~/.zshrc.d/*.zsh
 FAQ_EOF
 }
-alias zsh-faq='myzsh_faq'
-alias myzsh-faq='myzsh_faq'
+zsh-faq() { myzsh_faq "$@"; }
+myzsh-faq() { myzsh_faq "$@"; }
