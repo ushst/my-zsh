@@ -144,6 +144,12 @@ my_zsh_do_update_check() {
     if my_zsh_fetch_to "${repo}/${MyZshUpdaterCfg[remoteManagedPath]}" "${tmpNew}"; then
       cp -f "${my_zsh_managed_file}" "${backup}" 2>/dev/null || true
       mv -f "${tmpNew}" "${my_zsh_managed_file}"
+
+      tmpZshrcNew="${my_zsh_state_dir}/zshrc.new"
+      if my_zsh_fetch_to "${repo}/.zshrc" "${tmpZshrcNew}"; then
+        mv -f "${tmpZshrcNew}" "${HOME}/.zshrc"
+      fi
+
       my_zsh_update_local_version_cache "${remoteVersion}"
       [[ -t 1 ]] && echo "[my-zsh] Updated managed config to ${remoteVersion}. Backup: ${backup}. Restart shell."
     fi
