@@ -114,3 +114,73 @@ extract() {
 }
 
 alias x='extract'
+
+# Create directory and immediately cd into it
+mkcd() {
+  [[ -n "$1" ]] || { echo "Использование: mkcd <путь_к_папке>"; return 1; }
+  mkdir -p -- "$1" && cd -P -- "$1"
+}
+alias take='mkcd'
+
+# Clone git repository and immediately cd into its directory
+gclone() {
+  [[ -n "$1" ]] || { echo "Использование: gclone <repo-url> [target-dir] [git options...]"; return 1; }
+
+  local url=""
+  local target_dir=""
+  local -a args
+
+  for arg in "$@"; do
+    if [[ "$arg" =~ ^(https?://|git@|ssh://|git://) ]]; then
+      url="$arg"
+    fi
+    args+=("$arg")
+  done
+
+  if [[ -z "$url" ]]; then
+    command git clone "$@"
+    return $?
+  fi
+
+  local last_arg="${args[-1]}"
+  if [[ "$last_arg" != "$url" && ! "$last_arg" =~ ^- ]]; then
+    target_dir="$last_arg"
+  else
+    target_dir="$(basename "${url%.git}")"
+  fi
+
+  command git clone "$@" && [[ -d "$target_dir" ]] && cd "$target_dir"
+}
+alias gclcd='gclone'
+
+# Quick FAQ / Help for my-zsh aliases and features
+myzsh_faq() {
+  cat << 'FAQ_EOF'
+=== MY-ZSH CHEAT SHEET / FAQ ===
+
+[ Управление папками и гитом ]
+  mkcd <папка> / take <папка>   : Создать папку и сразу перейти в нее
+  gclone <url> [папка]           : Клонировать git репозиторий и сразу перейти в него
+  gclcd <url>                   : Алиас для gclone
+
+[ Пакетный менеджер ]
+  a i <пакет>                   : Установить пакет (apt install / pkg install)
+  a u                           : Обновить списки пакетов (apt update)
+  a up                          : Обновить установленные пакеты (apt upgrade -y)
+  a all                         : Выполнить update + upgrade
+
+[ Распаковка архивов ]
+  x <файл> / extract <файл>     : Автоматически распаковать .tar.gz, .zip, .rar, .7z и др.
+  untargz <файл>                : Распаковать .tar.gz (tar -xvzf)
+
+[ Управление обновлениями my-zsh ]
+  my_zsh_update_check 1         : Принудительно проверить и притянуть обновления с GitHub
+  my_zsh_do_update_check        : Выполнить прямое скачивание конфигов
+  myzsh-faq / zsh-faq           : Вывести эту справку
+
+[ Пользовательские настройки ]
+  Добавляйте свои функции и алиасы в ~/.zshrc.local или ~/.zshrc.d/*.zsh
+FAQ_EOF
+}
+alias zsh-faq='myzsh_faq'
+alias myzsh-faq='myzsh_faq'
