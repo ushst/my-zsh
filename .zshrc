@@ -49,6 +49,18 @@ my_zsh_with_lock() {
     rmdir "${my_zsh_lock_dir}" 2>/dev/null || true
     return 0
   fi
+
+  # Auto-recover from stale lock older than 10 minutes
+  if [[ -d "${my_zsh_lock_dir}" ]]; then
+    if [[ -n "$(find "${my_zsh_lock_dir}" -maxdepth 0 -mmin +10 2>/dev/null)" ]]; then
+      rmdir "${my_zsh_lock_dir}" 2>/dev/null || rm -rf "${my_zsh_lock_dir}" 2>/dev/null || true
+      if mkdir "${my_zsh_lock_dir}" 2>/dev/null; then
+        "$@"
+        rmdir "${my_zsh_lock_dir}" 2>/dev/null || true
+        return 0
+      fi
+    fi
+  fi
   return 1
 }
 
@@ -88,7 +100,7 @@ my_zsh_schedule_offline_retry() {
     sleep "${delay}"
     rm -f "${my_zsh_deferred_flag}"
     my_zsh_update_check 1
-  ) </dev/null >/dev/null 2>&1 & )
+  ) </dev/null >/dev/null 2>&1 &! )
 }
 
 my_zsh_fetch_stdout() {
@@ -198,7 +210,20 @@ fi
 
 # Update last: takes effect next shell.
 my_zsh_trigger_update_check() {
-  ( nohup zsh -c 'source ~/.zshrc; my_zsh_update_check "$@"' </dev/null >/dev/null 2>&1 & ) 2>/dev/null
+  # Only check in interactive shells
+  [[ -o interactive ]] || return 0
+
+  # Allow disabling auto-update
+  [[ "${MY_ZSH_AUTOUPDATE:-1}" == "0" ]] && return 0
+
+  # Only spawn background check if check interval elapsed
+  my_zsh_should_check_now || return 0
+
+  # Detach in a disowned background subshell without re-sourcing .zshrc
+  ( sleep 3; my_zsh_update_check "$@" ) </dev/null >/dev/null 2>&1 &!
 }
-my_zsh_trigger_update_check
+
+if [[ -o interactive ]]; then
+  my_zsh_trigger_update_check
+fi
 # --- end my-zsh loader + auto-updater ---
