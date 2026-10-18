@@ -7,8 +7,7 @@ if [[ -z ${_MY_ZSH_LOADER_ACTIVE:-} && -s "${XDG_CONFIG_HOME:-$HOME/.config}/my-
   typeset -g _MY_ZSH_LOADER_ACTIVE=1
   source "${XDG_CONFIG_HOME:-$HOME/.config}/my-zsh/loader.managed.zsh"
   unset _MY_ZSH_LOADER_ACTIVE
-  return
-fi
+else
 
 typeset -gA MyZshUpdaterCfg
 MyZshUpdaterCfg[repoRawBase]="https://raw.githubusercontent.com/ushst/my-zsh/main"
@@ -224,4 +223,5 @@ my_zsh_trigger_update_check() {
 if [[ -o interactive ]]; then
   my_zsh_trigger_update_check
 fi
+fi # stable entry point delegation
 # --- end my-zsh loader + auto-updater ---

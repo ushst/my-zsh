@@ -238,6 +238,67 @@ my_zsh_with_lock true || exit 1
 [[ ! -d "$my_zsh_lock_dir" ]]
 ''')
 
+    def test_legacy_auto_migration_preserves_personal_tail(self):
+        def setup(home):
+            (home / 'bin').mkdir()
+            curl = home / 'bin/curl'
+            curl.write_text('''#!/bin/bash
+while (( $# )); do
+  if [[ "$1" == -o ]]; then out="$2"; break; fi
+  shift
+done
+cp "$TEST_LOADER" "$out"
+''')
+            curl.chmod(0o700)
+            (home / '.zshrc').write_text(
+                '# --- my-zsh loader + auto-updater (github.com/ushst/my-zsh) ---\n'
+                '# old loader\n# --- end my-zsh loader + auto-updater ---\n'
+                'export PERSONAL=preserved\n')
+        managed = (ROOT / 'zshrc.managed').read_text()
+        code = managed[:managed.index('# If you come from bash')]
+        self.run_shell(code + f'''
+export PATH="$HOME/bin:$PATH"
+export TEST_LOADER="{ROOT}/.zshrc"
+_my_zsh_upgrade_legacy_loader || exit 1
+grep -q '^# Keep the entry point stable;' "$HOME/.zshrc" || exit 2
+grep -qx 'export PERSONAL=preserved' "$HOME/.zshrc" || exit 3
+mkdir -p "$XDG_CONFIG_HOME/my-zsh"
+cp "$TEST_LOADER" "$XDG_CONFIG_HOME/my-zsh/loader.managed.zsh"
+source "$HOME/.zshrc"
+[[ "$PERSONAL" == preserved ]] || exit 5
+[[ $(find "$XDG_STATE_HOME/my-zsh" -name zshrc.backup | wc -l) == 1 ]] || exit 4
+# A second call does nothing, even if the network is unavailable.
+rm "$HOME/bin/curl"
+_my_zsh_upgrade_legacy_loader
+''', setup)
+
+    def test_legacy_migration_rejects_bad_download_and_concurrent_edit(self):
+        for edit in (False, True):
+            with self.subTest(concurrent_edit=edit):
+                def setup(home):
+                    (home / 'bin').mkdir()
+                    curl = home / 'bin/curl'
+                    body = 'cp "$TEST_LOADER" "$out"\necho "# concurrent edit" >> "$HOME/.zshrc"\n' if edit else 'echo "if (" > "$out"\n'
+                    curl.write_text('''#!/bin/bash
+while (( $# )); do
+  if [[ "$1" == -o ]]; then out="$2"; break; fi
+  shift
+done
+''' + body)
+                    curl.chmod(0o700)
+                    (home / '.zshrc').write_text(
+                        '# --- my-zsh loader + auto-updater (github.com/ushst/my-zsh) ---\n'
+                        '# --- end my-zsh loader + auto-updater ---\nexport PERSONAL=preserved\n')
+                managed = (ROOT / 'zshrc.managed').read_text()
+                code = managed[:managed.index('# If you come from bash')]
+                self.run_shell(code + f'''
+export PATH="$HOME/bin:$PATH"
+export TEST_LOADER="{ROOT}/.zshrc"
+_my_zsh_upgrade_legacy_loader && exit 1
+grep -qx 'export PERSONAL=preserved' "$HOME/.zshrc" || exit 2
+! grep -q '^# Keep the entry point stable;' "$HOME/.zshrc"
+''', setup)
+
 
 if __name__ == '__main__':
     unittest.main()

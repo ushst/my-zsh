@@ -1,6 +1,53 @@
 # Managed by github.com/ushst/my-zsh (do not edit; it may be overwritten).
 # Put your changes into ~/.zshrc.local or ~/.zshrc.d/*.zsh
 
+# Old installations update only this managed file. Upgrade their entry point once,
+# preserving personal additions after the loader's end marker.
+_my_zsh_upgrade_legacy_loader() (
+  umask 077
+  local entry="${ZDOTDIR:-$HOME}/.zshrc"
+  local state="${XDG_STATE_HOME:-$HOME/.local/state}/my-zsh"
+  local repo="${MyZshUpdaterCfg[repoRawBase]:-https://raw.githubusercontent.com/ushst/my-zsh/main}"
+  local work pending lock="$state/loader-migration.lock"
+  [[ -f "$entry" && ! -L "$entry" ]] || return 0
+  grep -q '^# Keep the entry point stable;' "$entry" && return 0
+  [[ "$(head -n 1 "$entry")" == '# --- my-zsh loader + auto-updater (github.com/ushst/my-zsh) ---' ]] || return 0
+  grep -q '^# --- end my-zsh loader + auto-updater ---$' "$entry" || return 1
+  mkdir -p "$state" || return 1
+  # An interrupted migration can leave an empty lock. Downloads are bounded.
+  if ! mkdir "$lock" 2>/dev/null; then
+    [[ -n "$(find "$lock" -maxdepth 0 -mmin +10 2>/dev/null)" ]] || return 1
+    rmdir "$lock" 2>/dev/null && mkdir "$lock" 2>/dev/null || return 1
+  fi
+  trap '[[ -z "$pending" ]] || rm -f -- "$pending"; rmdir "$lock" 2>/dev/null' EXIT
+  work=$(mktemp -d "$state/loader-migration.XXXXXXXX") || return 1
+  cp -p "$entry" "$work/zshrc.backup" || return 1
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL --connect-timeout 5 --max-time 30 "$repo/.zshrc" -o "$work/loader" || return 1
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q --timeout=10 --tries=1 -O "$work/loader" "$repo/.zshrc" || return 1
+  else
+    return 1
+  fi
+  [[ -s "$work/loader" ]] || return 1
+  grep -q '^# Keep the entry point stable;' "$work/loader" || return 1
+  zsh -n "$work/loader" || return 1
+  pending=$(mktemp "${entry}.migration.XXXXXXXX") || return 1
+  cat "$work/loader" > "$pending" || return 1
+  print >> "$pending"
+  awk 'found { print } /^# --- end my-zsh loader \+ auto-updater ---$/ { found=1 }' "$work/zshrc.backup" >> "$pending" || return 1
+  zsh -n "$pending" || return 1
+  # Do not overwrite edits made while the download was in progress.
+  cmp -s "$entry" "$work/zshrc.backup" || return 1
+  mv -f "$pending" "$entry"
+)
+
+# Network and migration run away from the interactive startup path.
+if [[ -o interactive && ${MY_ZSH_AUTOUPDATE:-1} != 0 && -f "${ZDOTDIR:-$HOME}/.zshrc" ]] &&
+   ! grep -q '^# Keep the entry point stable;' "${ZDOTDIR:-$HOME}/.zshrc"; then
+  ( _my_zsh_upgrade_legacy_loader ) </dev/null >/dev/null 2>&1 &!
+fi
+
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
