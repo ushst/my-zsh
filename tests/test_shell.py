@@ -17,7 +17,7 @@ class ShellTests(unittest.TestCase):
             env = os.environ.copy()
             env.update(HOME=directory, XDG_CONFIG_HOME=directory + '/.config',
                        XDG_STATE_HOME=directory + '/.state', MY_ZSH_AUTOUPDATE='0',
-                       ZDOTDIR=directory)
+                       ZDOTDIR=directory, NVM_DIR=directory + '/.nvm')
             result = subprocess.run([shell, '-f', '-c', code], env=env,
                                     text=True, capture_output=True, timeout=15)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
