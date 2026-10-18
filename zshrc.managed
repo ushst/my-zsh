@@ -113,6 +113,32 @@ fi
 
 # Custom aliases and functions
 alias untargz='tar -xvzf'
+alias msf='msfconsole -q'
+alias logs='cd /var/log'
+
+# Choose an editable awk template with Alt+A (or Esc, then a).
+insert-awk() {
+  local choice left right
+  zle -R 'AWK: 1 поле | 2 разделитель | 3 фильтр | 4 сумма | другая клавиша — отмена' \
+    '1  awk '\''{print $1}'\''                         — вывести поле (0 = вся строка)' \
+    '2  awk -F '\'':'\'' '\''{print $1}'\''                  — поля разделены двоеточием' \
+    '3  awk '\''$1 == "значение" {print $0}'\''          — строки с нужным значением поля' \
+    '4  awk '\''{sum += $1} END {print sum}'\''         — сложить значения поля'
+  read -r -k 1 choice || { zle -R -c; return 0; }
+  case "$choice" in
+    1) left="awk '{print \$1"; right="}'" ;;
+    2) left="awk -F ':"; right="' '{print \$1}'" ;;
+    3) left="awk '\$1 == \""; right="\" {print \$0}'" ;;
+    4) left="awk '{sum += \$1"; right="} END {print sum}'" ;;
+    *) zle -R -c; return 0 ;;
+  esac
+  LBUFFER+="$left"
+  RBUFFER="$right$RBUFFER"
+  zle -R -c
+}
+zle -N insert-awk
+bindkey -M emacs '^[a' insert-awk
+bindkey -M viins '^[a' insert-awk
 
 
 function a() {
@@ -202,6 +228,20 @@ myzsh_faq() {
   mkcd <папка> / take <папка>   : Создать папку и сразу перейти в нее
   gclone <author/repo|url> [папка] : Клонировать git репозиторий и сразу перейти в него
   gclcd <url>                   : Алиас для gclone
+
+[ Терминал и awk ]
+  npm s                        : npm start (при установленном NVM)
+  logs                         : Перейти в /var/log
+  msf [аргументы]               : Запустить msfconsole -q (без баннера)
+  Alt+A / Esc, затем a         : Меню awk с примерами: 1 поле, 2 разделитель,
+                                3 фильтр, 4 сумма; другая клавиша — отмена
+  Ctrl+E / End                 : В конец команды после редактирования шаблона
+  Повторный Alt+A вставляет новый шаблон, а не заменяет предыдущий.
+
+[ Внутри msfconsole — при установленном ~/.msf4/msfconsole.rc ]
+  s <запрос>                   : search <запрос>
+  so                           : show options
+  alias                        : Показать сокращения msfconsole
 
 [ Пакетный менеджер ]
   a i <пакет>                   : Установить пакет (apt install / pkg install)
