@@ -115,21 +115,30 @@ fi
 alias untargz='tar -xvzf'
 alias msf='msfconsole -q'
 alias logs='cd /var/log'
+alias ports='ss -tuln'
+alias myip='ip -br addr'
+alias jlog='journalctl -b -e'
 
 # Choose an editable awk template with Alt+A (or Esc, then a).
 insert-awk() {
   local choice left right
-  zle -R 'AWK: 1 поле | 2 разделитель | 3 фильтр | 4 сумма | другая клавиша — отмена' \
+  zle -R 'AWK: 1 поле | 2 разделитель | 3 фильтр | 4 сумма | 5 последнее поле | 6 строки | 7 число | другая клавиша — отмена' \
     '1  awk '\''{print $1}'\''                         — вывести поле (0 = вся строка)' \
     '2  awk -F '\'':'\'' '\''{print $1}'\''                  — поля разделены двоеточием' \
     '3  awk '\''$1 == "значение" {print $0}'\''          — строки с нужным значением поля' \
-    '4  awk '\''{sum += $1} END {print sum}'\''         — сложить значения поля'
+    '4  awk '\''{sum += $1} END {print sum}'\''         — сложить значения поля' \
+    '5  awk '\''{print $NF}'\''                        — последнее поле строки' \
+    '6  awk '\''END {print NR}'\''                     — количество строк' \
+    '7  awk '\''$3 > 100'\''                           — числовой фильтр по полю'
   read -r -k 1 choice || { zle -R -c; return 0; }
   case "$choice" in
     1) left="awk '{print \$1"; right="}'" ;;
     2) left="awk -F ':"; right="' '{print \$1}'" ;;
     3) left="awk '\$1 == \""; right="\" {print \$0}'" ;;
     4) left="awk '{sum += \$1"; right="} END {print sum}'" ;;
+    5) left="awk '{print \$NF"; right="}'" ;;
+    6) left="awk 'END {print NR}'"; right='' ;;
+    7) left="awk '\$3 > 100"; right="'" ;;
     *) zle -R -c; return 0 ;;
   esac
   LBUFFER+="$left"
@@ -232,9 +241,17 @@ myzsh_faq() {
 [ Терминал и awk ]
   npm s                        : npm start (при установленном NVM)
   logs                         : Перейти в /var/log
+  ports                        : Слушающие TCP/UDP-порты (ss -tuln)
+  myip                         : Локальные адреса интерфейсов (ip -br addr)
+  jlog [опции]                 : Журнал текущей загрузки (journalctl -b -e)
+  l / lsa                      : Файлы, включая скрытые (Oh My Zsh)
+  ll                           : Подробный список без скрытых (Oh My Zsh)
+  .. / ...                     : Вверх на один / два каталога (Oh My Zsh)
+  Ctrl+R                       : Поиск в истории; повторить для следующего совпадения
   msf [аргументы]               : Запустить msfconsole -q (без баннера)
   Alt+A / Esc, затем a         : Меню awk с примерами: 1 поле, 2 разделитель,
-                                3 фильтр, 4 сумма; другая клавиша — отмена
+                                3 фильтр, 4 сумма, 5 последнее поле, 6 число строк,
+                                7 числовой фильтр; другая клавиша — отмена
   Ctrl+E / End                 : В конец команды после редактирования шаблона
   Повторный Alt+A вставляет новый шаблон, а не заменяет предыдущий.
 
