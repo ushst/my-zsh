@@ -23,9 +23,9 @@ _my_zsh_upgrade_legacy_loader() (
   work=$(mktemp -d "$state/loader-migration.XXXXXXXX") || return 1
   cp -p "$entry" "$work/zshrc.backup" || return 1
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL --connect-timeout 5 --max-time 30 "$repo/.zshrc" -o "$work/loader" || return 1
+    curl -fsSL --connect-timeout 5 --max-time 30 "$repo/.zshrc?my_zsh_migrate=$(date +%s)" -o "$work/loader" || return 1
   elif command -v wget >/dev/null 2>&1; then
-    wget -q --timeout=10 --tries=1 -O "$work/loader" "$repo/.zshrc" || return 1
+    wget -q --timeout=10 --tries=1 -O "$work/loader" "$repo/.zshrc?my_zsh_migrate=$(date +%s)" || return 1
   else
     return 1
   fi

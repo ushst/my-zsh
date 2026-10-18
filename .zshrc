@@ -100,7 +100,9 @@ my_zsh_schedule_offline_retry() {
 }
 
 my_zsh_fetch_stdout() {
-  local url="$1"
+  local url="$1" separator="?"
+  [[ "$url" == *\?* ]] && separator="&"
+  url+="${separator}my_zsh_check=$(date +%s)"
   if command -v curl >/dev/null 2>&1; then
     curl -fsSL --connect-timeout 5 --max-time "${MyZshUpdaterCfg[downloadTimeoutSeconds]}" "${url}" 2>/dev/null
     return $?
@@ -113,7 +115,9 @@ my_zsh_fetch_stdout() {
 }
 
 my_zsh_fetch_to() {
-  local url="$1" out="$2"
+  local url="$1" out="$2" separator="?"
+  [[ "$url" == *\?* ]] && separator="&"
+  url+="${separator}my_zsh_check=$(date +%s)"
   if command -v curl >/dev/null 2>&1; then
     curl -fsSL --connect-timeout 5 --max-time "${MyZshUpdaterCfg[downloadTimeoutSeconds]}" "${url}" -o "${out}"
     return $?
